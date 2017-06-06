@@ -1,5 +1,4 @@
 package gui;
-import java.awt.BorderLayout;
 import java.awt.EventQueue;
 
 import javax.swing.JFrame;
@@ -15,7 +14,6 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
-import javax.swing.JToolBar;
 import javax.swing.JScrollPane;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -28,6 +26,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -106,7 +105,6 @@ public class VentanaCliente extends JFrame implements MessageHandler {
 		
 		JMenu mnChat = new JMenu("Chat");
 		menuBar.add(mnChat);
-		VentanaCliente that = this;
 		JMenuItem mntmSalaDeChat = new JMenuItem("Sala de Chat");
 		mntmSalaDeChat.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
@@ -170,7 +168,17 @@ public class VentanaCliente extends JFrame implements MessageHandler {
 	
 	private void abrirVentanaConectar() {
 		this.usr = "";
+		if(cn != null){
+			cn.stopRequest();
+			try {
+				cn.join(400);
+			} catch (InterruptedException e) {
+			}
+			cn=null;
+		}
 		String usr = JOptionPane.showInputDialog(this, "Ingrese usuario:");
+		if(usr==null)
+			return;
 		ArchivoDePropiedades adp = new ArchivoDePropiedades("config.properties");
 		adp.lectura();
 		try {
@@ -192,6 +200,15 @@ public class VentanaCliente extends JFrame implements MessageHandler {
 			if(!item.equals(this.usr))
 				modeloLista.addElement(item);
 		}
+		Iterator<String> ventanas = this.chats.keySet().iterator();
+		String item;
+		while(ventanas.hasNext()){
+			item = ventanas.next();
+			if(!modeloLista.contains(item)){
+				this.chats.get(item).recibido("## El usuario se ha desconectado.");
+			}
+		}
+
 		listUsuarios.setModel(modeloLista);
 		lblUsuarios.setText("Cantidad de Usuarios Conectados: " + modeloLista.getSize());
 	}
@@ -215,6 +232,10 @@ public class VentanaCliente extends JFrame implements MessageHandler {
 	}
 
 	private void abrirChat(String usr){
+		if(this.usr == null || this.usr.equals("")){
+			abrirVentanaConectar();
+			return;
+		}
 		if(this.chats.containsKey(usr)){
 			focus(usr);
 		}else{
@@ -234,20 +255,38 @@ public class VentanaCliente extends JFrame implements MessageHandler {
 	
 	@Override
 	public void messageReceived(Message m) {
-		if(m.getType() == Message.SERVER_FATAL){
-			JOptionPane.showMessageDialog(this, m.getText(), "Error", JOptionPane.ERROR_MESSAGE);
-			return;
-		}
-		if(m.getType() == Message.STATUS_INFO){
-			if(m.getDestination().equals("clientlist")){
-				agregaUsuariosEnLista(m.getText().split(","));
+		if(m.getSource().equals("server")){
+			if(m.getType() == Message.STATUS_INFO){
+				if(m.getDestination().equals("clientlist")){
+					agregaUsuariosEnLista(m.getText().split(","));
+				}
+				return;
+			}
+			if(m.getType() == Message.SERVER_FATAL){
+				JOptionPane.showMessageDialog(this, m.getText(), "Error", JOptionPane.ERROR_MESSAGE);
+				if(m.getDestination().equals("login")){
+					this.usr="";
+					this.setTitle("Chat");
+				}
+				return;
 			}
 		}
-		if(m.getType() == Message.USR_MSJ){
-			abrirChat(m.getSource());
-			this.chats.get(m.getSource()).recibido(m.getSource()+ ": "+m.getText());
-		}
 		
+		if(m.getDestination().equals("all")){
+			if(this.chats.containsKey("all")){
+				if(m.getType() == Message.USR_MSJ && !m.getSource().equals(this.usr)){
+					this.chats.get("all").recibido(m.getSource()+ ": "+m.getText());
+				}
+			}
+		}else{
+			abrirChat(m.getSource());
+			if(m.getType() == Message.USR_MSJ){
+				this.chats.get(m.getSource()).recibido(m.getSource()+ ": "+m.getText());
+			}
+			if(m.getType() == Message.STATUS_INFO){
+				this.chats.get(m.getSource()).recibido("## Info: "+m.getText());
+			}
+		}
 	}
 	
 	public void enviar(String usr, String text){

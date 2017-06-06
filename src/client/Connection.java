@@ -20,6 +20,7 @@ public class Connection extends Thread {
 	private DataOutputStream o;
 	private String user;
 	private MessageHandler mh;
+	private int stop = 0;
 
 	public Connection(String host, int port, String user, MessageHandler mh) throws Exception {
 		this.s = new Socket(host, port);
@@ -29,17 +30,21 @@ public class Connection extends Thread {
 		this.o = new DataOutputStream(new BufferedOutputStream(this.s.getOutputStream()));
 	}
 
+	public void stopRequest(){
+		stop=1;
+	}
+	
 	@Override
 	public void run() {
 		boolean c = true;
-		while (c) {
+		while (c && stop==0) {
 			try {
 				Message msg = new Message(i.readUTF());
 				System.out.println("IN client: " + msg);
 				process(msg);
 			}catch(EOFException e){
 				
-			} catch (IOException e) {
+			}catch (IOException e) {
 				e.printStackTrace();
 				
 				c=false;
@@ -49,10 +54,16 @@ public class Connection extends Thread {
 			} catch (InterruptedException e) {
 			}
 		}
+		kissoff();
 	}
 
 	private void kissoff() {
-
+		try {
+			this.s.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	private void process(Message msg) throws IOException {
