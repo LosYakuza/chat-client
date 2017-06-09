@@ -204,7 +204,7 @@ public class VentanaCliente extends JFrame implements MessageHandler {
 		String item;
 		while(ventanas.hasNext()){
 			item = ventanas.next();
-			if(!modeloLista.contains(item)){
+			if(!item.equals("all") && !modeloLista.contains(item)){
 				this.chats.get(item).recibido("## El usuario se ha desconectado.");
 			}
 		}
