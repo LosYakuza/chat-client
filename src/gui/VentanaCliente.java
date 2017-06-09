@@ -38,7 +38,7 @@ public class VentanaCliente extends JFrame implements MessageHandler {
 	private JLabel lblUsuarios;
 	private Connection cn;
 	private HashMap<String, VentanaChat> chats;
-	private String usr;
+	private static String usr;
 	/**
 	 * Launch the application.
 	 */
@@ -302,6 +302,10 @@ public class VentanaCliente extends JFrame implements MessageHandler {
 	public void closeChat(String user){
 		this.chats.get(user).dispose();
 		this.chats.remove(user);
+	}
+	
+	public static String getUser(){
+		return usr;
 	}
 	
 }

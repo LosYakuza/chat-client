@@ -107,7 +107,7 @@ public class VentanaChat extends JFrame {
 	public void enviar() {
 		this.parent.enviar(this.usuarioDestinoChat, textField.getText());
 		textArea.setCaretPosition(textArea.getText().length());
-		textArea.append(textField.getText() + "\n");
+		textArea.append(VentanaCliente.getUser()+": "+textField.getText() + "\n");
 		textField.setText("");
 	}
 	
